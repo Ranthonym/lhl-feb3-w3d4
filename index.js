@@ -6,7 +6,58 @@ const bcrypt = require('bcrypt');
 
 const app = express();
 
+// DATABASE
+
 const userDB = {};
+
+const createUser = (username, password) => {
+  return new Promise((resolve, reject) => {
+    bcrypt.hash(password, 10)
+      .then(passwordHashed => {
+        const userId = uuid();
+        const newUser = {
+          id: userId,
+          username,
+          password: passwordHashed
+        };
+
+        userDB[userId] = newUser;
+        console.log(newUser);
+        resolve(newUser);
+      })
+      .catch(err => {
+        reject(err);
+      });
+  });
+};
+
+const loginUser = (username, password) => {
+  return new Promise((resolve, reject) => {
+    let foundUser;
+    for (let userId in userDB) {
+      if (userDB[userId].username === username) {
+        foundUser = userDB[userId];
+        break;
+      }
+    }
+
+    if (!foundUser) {
+      reject('Invalid username or password');
+      return;
+    }
+
+    bcrypt.compare(password, foundUser.password)
+      .then((correct) => {
+        if (correct) {
+          resolve(foundUser);
+        } else {
+          reject('Invalid username or password');
+        }
+      });
+  });
+};
+
+// APP CONFIG
 
 app.set('view engine', 'ejs');
 
@@ -35,19 +86,9 @@ app.post('/users', (req, res) => {
     return;
   }
 
-  bcrypt.hash(password, 10)
-    .then(passwordHashed => {
-      const userId = uuid();
-      const newUser = {
-        id: userId,
-        username,
-        password: passwordHashed
-      };
-
-      userDB[userId] = newUser;
-      console.log(newUser);
-
-      res.cookie('user_id', userId);
+  createUser(username, password)
+    .then(user => {
+      res.cookie('user_id', user.id);
       res.redirect('/');
     })
     .catch(err => {
@@ -69,27 +110,14 @@ app.post('/sessions', (req, res) => {
     return;
   }
 
-  let foundUser;
-  for (let userId in userDB) {
-    if (userDB[userId].username === username) {
-      foundUser = userDB[userId];
-      break;
-    }
-  }
-
-  if (foundUser) {
-    bcrypt.compare(password, foundUser.password)
-      .then((correct) => {
-        if (correct) {
-          res.cookie('user_id', foundUser.id);
-          res.redirect('/');
-        } else {
-          res.status(401).send('Invalid username or password');
-        }
-      });
-  } else {
-    res.status(401).send('Invalid username or password');
-  }
+  loginUser(username, password)
+    .then(user => {
+      res.cookie('user_id', user.id);
+      res.redirect('/');
+    })
+    .catch(err => {
+      res.status(401).send(err);
+    });
 });
 
 app.get('/sessions/logout', (req, res) => {
