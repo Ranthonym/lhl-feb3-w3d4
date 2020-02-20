@@ -1,61 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
-const uuid = require('uuid/v4');
-const bcrypt = require('bcrypt');
 
 const app = express();
 
 // DATABASE
 
-const userDB = {};
-
-const createUser = (username, password) => {
-  return new Promise((resolve, reject) => {
-    bcrypt.hash(password, 10)
-      .then(passwordHashed => {
-        const userId = uuid();
-        const newUser = {
-          id: userId,
-          username,
-          password: passwordHashed
-        };
-
-        userDB[userId] = newUser;
-        console.log(newUser);
-        resolve(newUser);
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
-};
-
-const loginUser = (username, password) => {
-  return new Promise((resolve, reject) => {
-    let foundUser;
-    for (let userId in userDB) {
-      if (userDB[userId].username === username) {
-        foundUser = userDB[userId];
-        break;
-      }
-    }
-
-    if (!foundUser) {
-      reject('Invalid username or password');
-      return;
-    }
-
-    bcrypt.compare(password, foundUser.password)
-      .then((correct) => {
-        if (correct) {
-          resolve(foundUser);
-        } else {
-          reject('Invalid username or password');
-        }
-      });
-  });
-};
+const { createUser, loginUser, findUser } = require('./models/users');
 
 // APP CONFIG
 
@@ -66,7 +17,7 @@ app.use(cookieParser());
 
 app.use((req, res, next) => {
   const userId = req.cookies.user_id;
-  const currentUser = userDB[userId];
+  const currentUser = findUser(userId);
 
   req.currentUser = currentUser;
   res.locals.currentUser = currentUser;
