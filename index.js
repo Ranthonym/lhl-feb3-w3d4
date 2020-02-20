@@ -64,12 +64,32 @@ app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-app.get('/', (req, res) => {
+app.use((req, res, next) => {
   const userId = req.cookies.user_id;
-
   const currentUser = userDB[userId];
 
-  res.render('index', { currentUser });
+  req.currentUser = currentUser;
+  res.locals.currentUser = currentUser;
+  next();
+});
+
+app.get('/', (req, res) => {
+  res.render('index');
+});
+
+// PROTECTED PAGE
+
+const protectedMiddleware = (req, res, next) => {
+  if (!req.currentUser) {
+    res.sendStatus(401);
+    return;
+  }
+
+  next();
+};
+
+app.get('/me', protectedMiddleware, (req, res) => {
+  res.render('me');
 });
 
 // USERS

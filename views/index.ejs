@@ -11,8 +11,8 @@
   <h1>Hello, World!</h1>
 
   <% if (currentUser) { %>
-  <p>Hello, <%= currentUser.username %></p>
-  <a href="/sessions/logout">Log out</a>
+  <p>Hello, <a href="/me"><%= currentUser.username %></a></p>
+  <a href=" /sessions/logout">Log out</a>
   <% } else { %>
   <a href="/users/new">Register</a>
   <a href="/sessions/new">Log In</a>
